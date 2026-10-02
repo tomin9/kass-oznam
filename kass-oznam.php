@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Kass Oznam – upozornenie pred nákupom vstupeniek
  * Description: Medzistránka s upozornením (napr. presun podujatia) pred presmerovaním na externý predaj vstupeniek. Jedna stránka pre všetky podujatia.
- * Version: 1.0.2
+ * Version: 1.1.0
  * Author: Ars Preuge
  * Text Domain: kass-oznam
  */
@@ -15,11 +15,13 @@ const KASS_OZNAM_OPT_NOTICE  = 'kass_oznam_notice';
 const KASS_OZNAM_OPT_EVENTS  = 'kass_oznam_events';
 const KASS_OZNAM_OPT_PAGE    = 'kass_oznam_page_url';
 const KASS_OZNAM_OPT_BUTTON  = 'kass_oznam_button';
+const KASS_OZNAM_OPT_HEAD    = 'kass_oznam_headline';
 
 /** Predvolené hodnoty. */
 function kass_oznam_defaults() {
 	return array(
 		KASS_OZNAM_OPT_NOTICE => "Upozornenie: podujatie bolo presunuté do Kina Baník.\nSkontrolujte si prosím miesto konania pred zakúpením vstupeniek.",
+		KASS_OZNAM_OPT_HEAD   => 'Podujatie je presunuté do Kina Baník',
 		KASS_OZNAM_OPT_BUTTON => 'Rozumiem, pokračovať na nákup vstupeniek',
 	);
 }
@@ -27,6 +29,24 @@ function kass_oznam_defaults() {
 function kass_oznam_get( $key ) {
 	$d = kass_oznam_defaults();
 	return get_option( $key, isset( $d[ $key ] ) ? $d[ $key ] : '' );
+}
+
+
+/** Text upozornenia: bezpečné escapovanie + **zvýraznenie** + odseky. */
+function kass_oznam_format( $text ) {
+	$html = esc_html( $text );
+	$html = preg_replace( '/\*\*(.+?)\*\*/su', '<strong>$1</strong>', $html );
+	return wpautop( $html );
+}
+
+/** Blok: výrazný nadpis + text upozornenia. */
+function kass_oznam_notice_html() {
+	$out = '';
+	$head = trim( (string) kass_oznam_get( KASS_OZNAM_OPT_HEAD ) );
+	if ( '' !== $head ) {
+		$out .= '<div class="kass-oznam__headline"><span aria-hidden="true">&#9888;</span> ' . esc_html( $head ) . '</div>';
+	}
+	return $out . '<div class="kass-oznam__notice">' . kass_oznam_format( kass_oznam_get( KASS_OZNAM_OPT_NOTICE ) ) . '</div>';
 }
 
 /** Zoznam podujatí: riadky v tvare "slug | Názov | https://odkaz-na-predaj". */
@@ -55,10 +75,10 @@ add_shortcode( 'kass_vstupenky', function () {
 	if ( $slug && isset( $events[ $slug ] ) ) {
 		$e = $events[ $slug ];
 		echo '<h2>' . esc_html( $e['name'] ) . '</h2>';
-		echo '<div class="kass-oznam__notice">' . wpautop( esc_html( kass_oznam_get( KASS_OZNAM_OPT_NOTICE ) ) ) . '</div>';
+		echo kass_oznam_notice_html();
 		echo '<p><a class="kass-oznam__button" href="' . esc_url( $e['url'] ) . '" rel="noopener">' . esc_html( kass_oznam_get( KASS_OZNAM_OPT_BUTTON ) ) . '</a></p>';
 	} else {
-		echo '<div class="kass-oznam__notice">' . wpautop( esc_html( kass_oznam_get( KASS_OZNAM_OPT_NOTICE ) ) ) . '</div>';
+		echo kass_oznam_notice_html();
 		if ( $events ) {
 			echo '<ul class="kass-oznam__list">';
 			foreach ( $events as $s => $e ) {
@@ -80,9 +100,11 @@ add_filter( 'body_class', function ( $classes ) {
 } );
 
 add_action( 'wp_enqueue_scripts', function () {
-	$css = '.kass-oznam__notice{background:#fff4e5;border-left:5px solid #e67e00;padding:1em 1.25em;margin:1em 0;font-size:1.1em}'
-		. '.kass-oznam__notice,.kass-oznam__notice p{color:#1a1a1a!important}.kass-oznam__notice p{margin:0 0 .5em}.kass-oznam__notice p:last-child{margin-bottom:0}'
-		. '.kass-oznam__button{display:inline-block;background:#c0392b;color:#fff!important;padding:.8em 1.6em;border-radius:4px;text-decoration:none;font-weight:bold}'
+	$css = '.kass-oznam__headline{background:#c0392b;color:#fff!important;font-size:1.6em;font-weight:800;text-transform:uppercase;letter-spacing:.02em;line-height:1.25;padding:.7em 1em;margin:1em 0 0;border-radius:4px 4px 0 0}'
+		. '.kass-oznam__notice{background:#2c303c;border-left:5px solid #f39c12;padding:1.1em 1.4em;margin:0 0 1.2em;font-size:1.1em;border-radius:0 0 4px 4px}'
+		. '.kass-oznam__notice,.kass-oznam__notice p{color:#eceff4!important}.kass-oznam__notice p{margin:0 0 .8em}.kass-oznam__notice p:last-child{margin-bottom:0}'
+		. '.kass-oznam__notice strong{color:#ffc15e!important;font-weight:800}'
+		. '.kass-oznam__button{display:inline-block;background:#c0392b;color:#fff!important;padding:.9em 1.8em;border-radius:4px;text-decoration:none;font-weight:bold;font-size:1.1em}'
 		. '.kass-oznam__button:hover{background:#962d22}';
 	// Stránka s medzistránkou vyplní celú výšku okna (pätička na spodku, bez bieleho pásu).
 	$css .= 'body.kass-oznam-page{min-height:100vh;background:#1d1f27}'
@@ -109,6 +131,7 @@ add_action( 'admin_menu', function () {
 
 add_action( 'admin_init', function () {
 	register_setting( 'kass_oznam', KASS_OZNAM_OPT_NOTICE, array( 'sanitize_callback' => 'sanitize_textarea_field' ) );
+	register_setting( 'kass_oznam', KASS_OZNAM_OPT_HEAD, array( 'sanitize_callback' => 'sanitize_text_field' ) );
 	register_setting( 'kass_oznam', KASS_OZNAM_OPT_BUTTON, array( 'sanitize_callback' => 'sanitize_text_field' ) );
 	register_setting( 'kass_oznam', KASS_OZNAM_OPT_EVENTS, array( 'sanitize_callback' => 'sanitize_textarea_field' ) );
 	register_setting( 'kass_oznam', KASS_OZNAM_OPT_PAGE, array( 'sanitize_callback' => 'esc_url_raw' ) );
@@ -126,9 +149,14 @@ function kass_oznam_settings_page() {
 			<?php settings_fields( 'kass_oznam' ); ?>
 			<table class="form-table" role="presentation">
 				<tr>
+					<th><label for="h">Výrazný nadpis</label></th>
+					<td><input id="h" type="text" class="large-text" name="<?php echo esc_attr( KASS_OZNAM_OPT_HEAD ); ?>" value="<?php echo esc_attr( kass_oznam_get( KASS_OZNAM_OPT_HEAD ) ); ?>">
+					<p class="description">Zobrazí sa veľkými písmenami v červenom pruhu nad textom. Nechajte prázdne, ak ho nechcete.</p></td>
+				</tr>
+				<tr>
 					<th><label for="n">Text upozornenia</label></th>
 					<td><textarea id="n" name="<?php echo esc_attr( KASS_OZNAM_OPT_NOTICE ); ?>" rows="4" class="large-text"><?php echo esc_textarea( kass_oznam_get( KASS_OZNAM_OPT_NOTICE ) ); ?></textarea>
-					<p class="description">Zobrazí sa pri všetkých podujatiach. Pri ďalšej zmene stačí upraviť tu.</p></td>
+					<p class="description">Zobrazí sa pri všetkých podujatiach. Dôležité časti zvýraznite dvojitými hviezdičkami: <code>**presúvame do Kina Baník**</code>. Nový odsek = prázdny riadok.</p></td>
 				</tr>
 				<tr>
 					<th><label for="b">Text tlačidla</label></th>
