@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Kass Oznam – upozornenie pred nákupom vstupeniek
  * Description: Medzistránka s upozornením (napr. presun podujatia) pred presmerovaním na externý predaj vstupeniek. Jedna stránka pre všetky podujatia.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Ars Preuge
  * Text Domain: kass-oznam
  */
@@ -73,6 +73,7 @@ add_shortcode( 'kass_vstupenky', function () {
 
 add_action( 'wp_enqueue_scripts', function () {
 	$css = '.kass-oznam__notice{background:#fff4e5;border-left:5px solid #e67e00;padding:1em 1.25em;margin:1em 0;font-size:1.1em}'
+		. '.kass-oznam__notice,.kass-oznam__notice p{color:#1a1a1a!important}.kass-oznam__notice p{margin:0 0 .5em}.kass-oznam__notice p:last-child{margin-bottom:0}'
 		. '.kass-oznam__button{display:inline-block;background:#c0392b;color:#fff!important;padding:.8em 1.6em;border-radius:4px;text-decoration:none;font-weight:bold}'
 		. '.kass-oznam__button:hover{background:#962d22}';
 	wp_register_style( 'kass-oznam', false );
