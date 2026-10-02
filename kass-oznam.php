@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Kass Oznam – upozornenie pred nákupom vstupeniek
  * Description: Medzistránka s upozornením (napr. presun podujatia) pred presmerovaním na externý predaj vstupeniek. Jedna stránka pre všetky podujatia.
- * Version: 1.0.1
+ * Version: 1.0.2
  * Author: Ars Preuge
  * Text Domain: kass-oznam
  */
@@ -71,11 +71,25 @@ add_shortcode( 'kass_vstupenky', function () {
 	return ob_get_clean();
 } );
 
+/** Pomocná trieda na <body> pre stránku s shortcodom. */
+add_filter( 'body_class', function ( $classes ) {
+	if ( is_singular() && has_shortcode( (string) get_post_field( 'post_content', get_the_ID() ), 'kass_vstupenky' ) ) {
+		$classes[] = 'kass-oznam-page';
+	}
+	return $classes;
+} );
+
 add_action( 'wp_enqueue_scripts', function () {
 	$css = '.kass-oznam__notice{background:#fff4e5;border-left:5px solid #e67e00;padding:1em 1.25em;margin:1em 0;font-size:1.1em}'
 		. '.kass-oznam__notice,.kass-oznam__notice p{color:#1a1a1a!important}.kass-oznam__notice p{margin:0 0 .5em}.kass-oznam__notice p:last-child{margin-bottom:0}'
 		. '.kass-oznam__button{display:inline-block;background:#c0392b;color:#fff!important;padding:.8em 1.6em;border-radius:4px;text-decoration:none;font-weight:bold}'
 		. '.kass-oznam__button:hover{background:#962d22}';
+	// Stránka s medzistránkou vyplní celú výšku okna (pätička na spodku, bez bieleho pásu).
+	$css .= 'body.kass-oznam-page{min-height:100vh;background:#1d1f27}'
+		. 'body.kass-oznam-page #wrapper{min-height:100vh;display:flex;flex-direction:column}'
+		. 'body.kass-oznam-page #wrapper>#main{flex:1 0 auto}'
+		. 'body.kass-oznam-page #side-header{min-height:100vh}'
+		. 'body.kass-oznam-page #side-header .side-header-wrapper{min-height:100vh}';
 	wp_register_style( 'kass-oznam', false );
 	wp_enqueue_style( 'kass-oznam' );
 	wp_add_inline_style( 'kass-oznam', $css );
