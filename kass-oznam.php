@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Kass Oznam – upozornenie pred nákupom vstupeniek
  * Description: Medzistránka s upozornením (napr. presun podujatia) pred presmerovaním na externý predaj vstupeniek. Jedna stránka pre všetky podujatia.
- * Version: 1.1.0
+ * Version: 1.2.0
  * Author: Ars Preuge
  * Text Domain: kass-oznam
  */
@@ -20,7 +20,7 @@ const KASS_OZNAM_OPT_HEAD    = 'kass_oznam_headline';
 /** Predvolené hodnoty. */
 function kass_oznam_defaults() {
 	return array(
-		KASS_OZNAM_OPT_NOTICE => "Upozornenie: podujatie bolo presunuté do Kina Baník.\nSkontrolujte si prosím miesto konania pred zakúpením vstupeniek.",
+		KASS_OZNAM_OPT_NOTICE => "Vážení návštevníci a priaznivci kultúry,\noznamujeme Vám, že vďaka podpore mesta Prievidza sme získali nenávratné finančné prostriedky na modernizáciu divadelnej sály v Dome kultúry. Projekt je zameraný na obnovu javiskovej techniky, ozvučenia, osvetlenia a súvisiacich technických systémov, ako aj výmenu súčasného zasúvacieho hľadiska za nové vrátane nových, pohodlnejších sedadiel.\nRekonštrukčné práce sa začali v týchto dňoch a hoci sa tešíme na nové možnosti, ktoré nám modernizácia prinesie, rozsah a charakter prác nám neumožňuje využívať sálu v štandardnom prevádzkovom režime.\nPredpokladaný termín ukončenia projektu je do konca januára 2027.\n\nPlánované podujatia, divadelné predstavenia a koncerty, ktoré je technicky a organizačne možné zvládnuť v inom priestore, preto **presúvame do kinosály Kina Baník, Ul. M.R. Štefánika 1.**\n\nVeríme, že po dokončení budeme môcť našim divákom a návštevníkom ponúknuť ešte kvalitnejšie služby, lepší zážitok a moderné prostredie pre kultúru.\n\nĎakujeme Vám za pochopenie a trpezlivosť.\n\nAktuálne informácie o termínoch a miestach konania podujatí nájdete na našej web stránke [www.kasspd.sk](https://www.kasspd.sk)",
 		KASS_OZNAM_OPT_HEAD   => 'Podujatie je presunuté do Kina Baník',
 		KASS_OZNAM_OPT_BUTTON => 'Rozumiem, pokračovať na nákup vstupeniek',
 	);
@@ -32,10 +32,17 @@ function kass_oznam_get( $key ) {
 }
 
 
-/** Text upozornenia: bezpečné escapovanie + **zvýraznenie** + odseky. */
+/** Text upozornenia: bezpečné escapovanie + **zvýraznenie** + [odkazy](https://...) + odseky. */
 function kass_oznam_format( $text ) {
 	$html = esc_html( $text );
 	$html = preg_replace( '/\*\*(.+?)\*\*/su', '<strong>$1</strong>', $html );
+	$html = preg_replace_callback(
+		'/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/u',
+		function ( $m ) {
+			return '<a href="' . esc_url( wp_specialchars_decode( $m[2] ) ) . '" rel="noopener">' . $m[1] . '</a>';
+		},
+		$html
+	);
 	return wpautop( $html );
 }
 
@@ -103,7 +110,7 @@ add_action( 'wp_enqueue_scripts', function () {
 	$css = '.kass-oznam__headline{background:#c0392b;color:#fff!important;font-size:1.6em;font-weight:800;text-transform:uppercase;letter-spacing:.02em;line-height:1.25;padding:.7em 1em;margin:1em 0 0;border-radius:4px 4px 0 0}'
 		. '.kass-oznam__notice{background:#2c303c;border-left:5px solid #f39c12;padding:1.1em 1.4em;margin:0 0 1.2em;font-size:1.1em;border-radius:0 0 4px 4px}'
 		. '.kass-oznam__notice,.kass-oznam__notice p{color:#eceff4!important}.kass-oznam__notice p{margin:0 0 .8em}.kass-oznam__notice p:last-child{margin-bottom:0}'
-		. '.kass-oznam__notice strong{color:#ffc15e!important;font-weight:800}'
+		. '.kass-oznam__notice a{color:#ffc15e!important;text-decoration:underline}.kass-oznam__notice strong{color:#ffc15e!important;font-weight:800}'
 		. '.kass-oznam__button{display:inline-block;background:#c0392b;color:#fff!important;padding:.9em 1.8em;border-radius:4px;text-decoration:none;font-weight:bold;font-size:1.1em}'
 		. '.kass-oznam__button:hover{background:#962d22}';
 	// Stránka s medzistránkou vyplní celú výšku okna (pätička na spodku, bez bieleho pásu).
@@ -156,7 +163,7 @@ function kass_oznam_settings_page() {
 				<tr>
 					<th><label for="n">Text upozornenia</label></th>
 					<td><textarea id="n" name="<?php echo esc_attr( KASS_OZNAM_OPT_NOTICE ); ?>" rows="4" class="large-text"><?php echo esc_textarea( kass_oznam_get( KASS_OZNAM_OPT_NOTICE ) ); ?></textarea>
-					<p class="description">Zobrazí sa pri všetkých podujatiach. Dôležité časti zvýraznite dvojitými hviezdičkami: <code>**presúvame do Kina Baník**</code>. Nový odsek = prázdny riadok.</p></td>
+					<p class="description">Zobrazí sa pri všetkých podujatiach. Dôležité časti zvýraznite dvojitými hviezdičkami: <code>**presúvame do Kina Baník**</code>. Odkaz: <code>[text](https://adresa)</code>. Nový odsek = prázdny riadok.</p></td>
 				</tr>
 				<tr>
 					<th><label for="b">Text tlačidla</label></th>
